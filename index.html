@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Community Lots</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      display: flex;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 280px;
+      background: #f2f7f9;
+      padding: 20px;
+      border-right: 1px solid #ccc;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .sidebar .search-bar {
+      display: flex;
+      margin-bottom: 20px;
+    }
+
+    .sidebar .search-bar input {
+      flex: 1;
+      padding: 5px;
+    }
+
+    .sidebar .search-bar button {
+      background: #ccc;
+      border: none;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    .sidebar .checkbox-group label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 5px 0;
+    }
+
+    .circle {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+    }
+
+    .red {
+      background: red;
+    }
+
+    .green {
+      background: green;
+    }
+
+    .brown {
+      background: brown;
+    }
+
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: #fff;
+      overflow: hidden;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .map-type-toggle {
+      position: absolute;
+      top: 20px;
+      right: 160px;
+      display: flex;
+      gap: 10px;
+      background: white;
+      border: 1px solid #ccc;
+      padding: 6px;
+      border-radius: 5px;
+      z-index: 10;
+    }
+
+    .controls {
+      position: absolute;
+      top: 50%;
+      right: 20px;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .controls button {
+      width: 36px;
+      height: 36px;
+      font-size: 18px;
+      background: #eee;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .north-icon {
+      position: absolute;
+      top: 50%;
+      right: 70px;
+      transform: translateY(-50%);
+      text-align: center;
+      z-index: 10;
+    }
+
+    .map-wrapper {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+      background: #f0f0f0;
+      cursor: grab;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #mapImage {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      transform-origin: center center;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    h4.map-caption {
+      text-align: center;
+      margin: 0;
+      padding: 10px;
+      background: #f9f9f9;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="sidebar">
+    <div>
+      <h2>Community Lots</h2>
+      <div class="search-bar">
+        <input type="text" placeholder="Find a Homesite" />
+        <button>🔍</button>
+      </div>
+      <h3>Lot Homesite</h3>
+      <div class="checkbox-group">
+        <label><input type="checkbox" checked /> Sold <span class="circle red"></span></label>
+        <label><input type="checkbox" checked /> Available <span class="circle green"></span></label>
+        <label><input type="checkbox" /> Not Released <span class="circle brown"></span></label>
+      </div>
+      <h3>Home Floorplans</h3>
+      <div class="checkbox-group">
+        <label><input type="checkbox" checked /> 1500</label>
+        <label><input type="checkbox" checked /> 1602</label>
+        <label><input type="checkbox" checked /> 1602ACC</label>
+        <label><input type="checkbox" checked /> 1602X</label>
+      </div>
+    </div>
+    <div style="font-size: 13px; padding-top: 10px;">
+      <div onclick="toggleDisclaimer()" style="font-weight: bold; cursor: pointer;">▼ DISCLAIMER</div>
+      <div id="disclaimer-text" style="display: none;">All lot info is for display purposes only and subject to change.
+      </div>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="map-type-toggle">
+      <label><input type="checkbox" checked /> Default</label>
+      <label><input type="checkbox" /> Roadmap</label>
+      <label><input type="checkbox" /> Satellite</label>
+    </div>
+
+    <div class="map-wrapper" id="mapWrapper">
+      <img id="mapImage" src="23060-Towne.svg" alt="Map" />
+    </div>
+
+    <h4 class="map-caption">Project Name: Towne Avenue - Site Plan | Status: Under Entitlement | Date/version: May 2025
+    </h4>
+
+    <div class="north-icon">
+      <div>N</div>
+      <span style="font-size: 24px;">↑</span>
+    </div>
+
+    <div class="controls">
+      <button onclick="zoomIn()">+</button>
+      <button onclick="zoomOut()">-</button>
+      <button onclick="toggleFullscreen()">⛶</button>
+      <button onclick="window.print()">🖨️</button>
+    </div>
+  </div>
+
+  <script>
+    let zoom = 1;
+    let posX = 0, posY = 0;
+    let startX, startY;
+    let isDragging = false;
+
+    const wrapper = document.getElementById('mapWrapper');
+    const img = document.getElementById('mapImage');
+
+    function updateTransform() {
+      img.style.transform = `translate(-50%, -50%) translate(${posX}px, ${posY}px) scale(${zoom})`;
+    }
+
+    wrapper.addEventListener('mousedown', (e) => {
+      isDragging = true;
+      startX = e.clientX - posX;
+      startY = e.clientY - posY;
+      wrapper.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mouseup', () => {
+      isDragging = false;
+      wrapper.style.cursor = 'grab';
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      posX = e.clientX - startX;
+      posY = e.clientY - startY;
+      updateTransform();
+    });
+
+    wrapper.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const rect = wrapper.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
+      const delta = e.deltaY < 0 ? 1.1 : 0.9;
+      const oldZoom = zoom;
+      zoom *= delta;
+      zoom = Math.max(0.5, Math.min(zoom, 5));
+      posX -= (offsetX - wrapper.clientWidth / 2) * (zoom - oldZoom);
+      posY -= (offsetY - wrapper.clientHeight / 2) * (zoom - oldZoom);
+      updateTransform();
+    });
+
+    function zoomIn() {
+      zoom += 0.1;
+      updateTransform();
+    }
+
+    function zoomOut() {
+      zoom = Math.max(0.5, zoom - 0.1);
+      updateTransform();
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    function toggleDisclaimer() {
+      const disclaimer = document.getElementById('disclaimer-text');
+      disclaimer.style.display = disclaimer.style.display === 'none' ? 'block' : 'none';
+    }
+
+    updateTransform();
+  </script>
+</body>
+
+</html>
